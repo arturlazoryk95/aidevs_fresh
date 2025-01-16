@@ -171,3 +171,4 @@ cython_debug/
 .pypirc
 pliki_z_fabryki/
 not_on_github/
+tmp_files/
