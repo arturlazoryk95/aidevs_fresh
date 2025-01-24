@@ -4,12 +4,18 @@ import json
 import pprint
 from VisualAIService import ChatService
 import re
+from langfuse.decorators import observe, langfuse_context
+from decouple import config
 
 PHOTOS_URL = 'https://centrala.ag3nts.org/dane/barbara/'
 PHOTOS_NAMES = ['IMG_559.PNG', 'IMG_1410.PNG', 'IMG_1443.PNG', 'IMG_1444.PNG']
 PHOTOS_COMMANDS = ['REPAIR', 'DARKEN', 'BRIGHTEN']
 
-
+langfuse_context.configure(
+    public_key=config('LANGFUSE_PUBLIC_KEY'),
+    secret_key=config('LANGFUSE_SECRET_KEY'),
+    host=config('LANGFUSE_HOST'),
+)
 
 def parse_ai_response(response:str) -> tuple[str, str]:
     pattern = r'<change>(.*?)</change>'
@@ -25,62 +31,48 @@ def parse_ai_response(response:str) -> tuple[str, str]:
     return 'none', ''
     
 
+
+@observe()
 def main():
     centrala = CentralaService()
     openai_service = ChatService()
     with open('prompts/visual_prompt.md', 'r') as file:
         system_prompt = file.read()
 
+    final_images = ['IMG_559_NRR7.PNG', 'IMG_1410_FXER.PNG', 'IMG_1443_FT12.PNG', 'IMG_1444.PNG']
+    # for photo in PHOTOS_NAMES:
+
+    #     photo_name = photo
+    #     print('New photo: ', photo_name)
+    #     print('-'*50)   
+    #     while True:
+    #         answer = openai_service.analyse_image(PHOTOS_URL+photo_name, system_prompt)
+    #         print('Model suggests: ', answer.action)
+    #         if answer.action == 'NO_CHANGE_NEEDED':
+    #             print('No action needed')
+    #             final_images.append(photo_name)
+    #             break
+    #         else:
+    #             response = centrala.handle_submits('photos', answer.action+' '+photo_name)
+    #             print('Centrala says: ', response['message'])
+    #             found_new_image = openai_service.extractImageName(response['message'])
+    #             if found_new_image == 'None':
+    #                 print('No image name found.')
+    #                 final_images.append(photo_name)
+    #                 break
+    #             else:
+    #                 print('Found new image:', found_new_image)
+    #                 photo_name = found_new_image
+            
     
-    j=0
-    rysopis_barbary = ''
-    for j in range(0, 4):
+    # print('Final images:', final_images)
+    # response = openai_service.analyse_many_images([PHOTOS_URL+photo for photo in final_images])
+    # print('Final response:', response)
 
-        name_photo = PHOTOS_NAMES[j]
-        print(f'IMAGE: {name_photo}')
-        print('-'*50)
-        i=1
-        while True:
-            if(i==5):
-                break
+    final_response = 'Nie wiem, kto to jest. Opisując osobę na zdjęciach, mogę powiedzieć, że to kobieta o długich, ciemnych włosach, nosząca okulary. Wydaje się, że ma na sobie szary t-shirt, a na jednym ze zdjęć widać tatuaż z pająkiem na ramieniu. Na jednym z obrazów kobieta trzyma kubek, a na innym znajduje się w siłowni.'
     
-
-            answer = openai_service.analyse_image(
-                url=PHOTOS_URL+name_photo,
-                system_prompt=system_prompt,
-            )
-            print(answer)
-            response_type, response = parse_ai_response(answer)
-            print(response_type, response)
-            print('-'*50)
-            if response_type == 'change':
-                new_response = centrala.handle_submits(
-                    task='photos',
-                    answer=response+' '+name_photo,
-                )
-                print(new_response)
-                name_photo = openai_service.extractImageName(new_response['message'])
-                if name_photo == 'None':
-                    break
-                print(name_photo)
-                i+=1
-            elif response_type == 'answer':
-                print(response)
-                rysopis_barbary += response + '\n'
-                break
-            else:
-                break
-            print('='*50)
-        j+=1
-    
-    submit = centrala.handle_submits(
-        task='photos',
-        answer=rysopis_barbary,
-    )
-    print(submit)
-
-
-
+    an = centrala.handle_submits('photos', final_response)
+    print(an)
 
 
 if __name__=='__main__':
